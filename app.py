@@ -7,7 +7,6 @@ from flask_cors import CORS
 
 app = Flask(__name__)
 CORS(app, origins=["http://localhost:3000", "http://192.168.20.22:3000"])  # Explicitly allow requests from your Next.js frontend
-# CORS(app) 
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
@@ -46,4 +45,4 @@ def remove_background():
     return {'error': 'Invalid file'}, 400
 
 if __name__ == '__main__':
-    app.run(debug=True, host='0.0.0.0')
+    app.run(debug=True, host='0.0.0.0', port=80)  # Listen on port 80

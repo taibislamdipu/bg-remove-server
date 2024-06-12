@@ -4,10 +4,10 @@ from werkzeug.utils import secure_filename
 from rembg import remove
 from io import BytesIO
 from flask_cors import CORS
-from PIL import Image
+import piexif
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:3000", "http://192.168.20.22:3000"])  # Explicitly allow requests from your Next.js frontend
+CORS(app, origins=["http://localhost:3000", "http://192.168.20.22:3000"]) 
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
@@ -33,31 +33,31 @@ def remove_background():
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         file.save(file_path)
 
-        # Open the image using PIL
-        with Image.open(file_path) as input_image:
-            # Convert the image to a byte array
-            input_image_bytes = BytesIO()
-            input_image.save(input_image_bytes, format='PNG')
-            input_image_bytes = input_image_bytes.getvalue()
+        # Check and correct orientation
+        orientation = 1  # default orientation
+        exif_data = piexif.load(file_path)
+        if '0th' in exif_data and piexif.ImageIFD.Orientation in exif_data['0th']:
+            orientation = exif_data['0th'][piexif.ImageIFD.Orientation]
 
-            # Remove the background
-            output_image_bytes = remove(input_image_bytes)
+        # Open the image using rembg
+        with open(file_path, 'rb') as f:
+            input_image_bytes = f.read()
 
-            # Create an Image object from the byte array
-            output_image = Image.open(BytesIO(output_image_bytes))
+        # Remove the background
+        output_image_bytes = remove(input_image_bytes)
 
-            # Save the output image to a BytesIO object
-            output_buffer = BytesIO()
-            output_image.save(output_buffer, format='PNG')
-            output_buffer.seek(0)
+        # Create output file
+        output_image_path = os.path.join(app.config['UPLOAD_FOLDER'], 'output.png')
+        with open(output_image_path, 'wb') as f:
+            f.write(output_image_bytes)
 
         # Clean up the saved file
         os.remove(file_path)
 
-        return send_file(output_buffer, mimetype='image/png')
+        return send_file(output_image_path, mimetype='image/png')
 
     return {'error': 'Invalid file'}, 400
 
 if __name__ == '__main__':
-    port = int(os.environ.get('PORT', 5000))  # Use the PORT environment variable if available, otherwise default to port 5000
+    port = int(os.environ.get('PORT', 8000))  
     app.run(debug=True, host='0.0.0.0', port=port)

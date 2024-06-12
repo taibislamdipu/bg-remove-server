@@ -11,6 +11,7 @@ CORS(app, origins=["http://localhost:3000", "http://192.168.20.22:3000"])
 
 app.config['UPLOAD_FOLDER'] = 'uploads'
 app.config['ALLOWED_EXTENSIONS'] = {'png', 'jpg', 'jpeg'}
+API_KEY = "1234"  # Set your API key here
 
 if not os.path.exists(app.config['UPLOAD_FOLDER']):
     os.makedirs(app.config['UPLOAD_FOLDER'])
@@ -18,10 +19,17 @@ if not os.path.exists(app.config['UPLOAD_FOLDER']):
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
 
-@app.route('/remove-background', methods=['POST'])
+@app.route('/api/v1/remove-background', methods=['POST'])
 def remove_background():
     if 'image_file' not in request.files:
         return {'error': 'No file part'}, 400
+
+    # Check if the API key is provided in the request headers
+    if 'x-api-key' not in request.headers:
+        return {'error': 'API key required'}, 401
+
+    if request.headers['x-api-key'] != API_KEY:
+        return {'error': 'Invalid API key'}, 401
 
     file = request.files['image_file']
     
